@@ -1,27 +1,25 @@
-import pandas as pd
-import numpy as np
-
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-
-from sklearn.naive_bayes import GaussianNB
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import (
-    RandomForestClassifier,
-    VotingClassifier,
-    AdaBoostClassifier,
-    StackingClassifier
-)
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
-from sklearn.linear_model import LogisticRegression
-from sklearn.calibration import CalibratedClassifierCV
-
 import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.ensemble import (
+    AdaBoostClassifier,
+    RandomForestClassifier,
+    StackingClassifier,
+    VotingClassifier,
+)
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 
 # ---------------------------
-# LOAD DATASET
+# LOAD DATASET — UCI Heart Disease (Cleveland)
 # ---------------------------
 columns = [
     'age', 'sex', 'cp', 'trestbps', 'chol',
@@ -31,16 +29,16 @@ columns = [
 
 df = pd.read_csv("processed.cleveland.data", names=columns)
 
-# Convert target to binary
+# Convert target from multi-class (0-4) to binary (0 = no disease, 1 = disease present)
 df['target'] = df['target'].apply(lambda x: 0 if x == 0 else 1)
 
-# Handle missing values
+# Handle missing values: '?' denotes missing, coerce to NaN, then impute with median
 df.replace('?', np.nan, inplace=True)
 df = df.apply(pd.to_numeric, errors='coerce')
 df.fillna(df.median(), inplace=True)
 
 # ---------------------------
-# SPLIT DATA
+# SPLIT DATA — 80/20 train/test with stratified sampling
 # ---------------------------
 X = df.drop('target', axis=1)
 y = df['target']
@@ -53,14 +51,17 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 # ---------------------------
-# SCALING
+# SCALING — standardize features (fit only on train to avoid data leakage)
+# Distance-based models (KNN, SVM, LR, etc.) are sensitive to feature scale
 # ---------------------------
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
 # ---------------------------
-# MODELS
+# MODELS — diverse set covering key families:
+# probabilistic (NB), tree-based (DT, RF, AdaBoost),
+# distance-based (KNN, SVM), linear (LR), and ensembles (Voting, Stacking)
 # ---------------------------
 nb = GaussianNB()
 dt = DecisionTreeClassifier(random_state=42)
@@ -69,6 +70,7 @@ knn = KNeighborsClassifier(n_neighbors=5)
 
 lr = LogisticRegression(max_iter=2000, solver='lbfgs', random_state=42)
 
+# SVC wrapped in CalibratedClassifierCV to enable predict_proba for soft voting
 svm = CalibratedClassifierCV(
     SVC(random_state=42),
     ensemble=False
@@ -110,13 +112,14 @@ models = {
 }
 
 # ---------------------------
-# TRAIN + EVALUATE
+# TRAIN + EVALUATE — each model on its appropriate input format
+# Distance-based (KNN, LR, SVM) and ensembles containing them (Voting, Stacking)
+# use scaled features; tree-based and naive Bayes use original unscaled features
 # ---------------------------
 accuracies = {}
 
 for name, model in models.items():
 
-    # choose correct dataset
     if name in ["KNN", "Logistic Regression", "SVM", "Voting", "Stacking"]:
         model.fit(X_train_scaled, y_train)
         preds = model.predict(X_test_scaled)
@@ -129,7 +132,7 @@ for name, model in models.items():
     print(f"{name} Accuracy: {acc:.4f}")
 
 # ---------------------------
-# BEST MODEL
+# SELECT BEST MODEL — highest accuracy across all nine
 # ---------------------------
 best_model_name = max(accuracies, key=accuracies.get)
 
@@ -139,7 +142,7 @@ print("\nBest Model:", best_model_name)
 print("Best Accuracy:", accuracies[best_model_name])
 
 # ---------------------------
-# SAVE MODEL + SCALER
+# SAVE BEST MODEL & SCALER — for reuse in inference without retraining
 # ---------------------------
 joblib.dump(best_model, "heart_model.pkl")
 joblib.dump(scaler, "scaler.pkl")
@@ -147,7 +150,7 @@ joblib.dump(scaler, "scaler.pkl")
 print("\nModel and scaler saved successfully!")
 
 # ---------------------------
-# METRICS FUNCTION
+# METRICS FUNCTION — compute accuracy, precision, recall, F1 from trained model
 # ---------------------------
 def get_metrics(model, X, y):
     pred = model.predict(X)
@@ -159,7 +162,8 @@ def get_metrics(model, X, y):
     }
 
 # ---------------------------
-# FINAL METRICS (FIXED)
+# COMPUTE & SAVE METRICS FOR ALL MODELS — each uses the same data variant
+# (scaled or unscaled) that was used during training to ensure consistency
 # ---------------------------
 metrics = {
     "Logistic Regression": get_metrics(lr, X_test_scaled, y_test),
@@ -178,4 +182,3 @@ metrics = {
 joblib.dump(metrics, "model_metrics.pkl")
 
 print("All model metrics saved successfully!")
-print("New changes comming soon.")
