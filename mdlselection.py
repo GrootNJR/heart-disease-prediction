@@ -1,3 +1,7 @@
+"""Train and evaluate multiple classifiers on the UCI Heart Disease dataset."""
+
+# pylint: disable=invalid-name
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -152,13 +156,14 @@ print("\nModel and scaler saved successfully!")
 # ---------------------------
 # METRICS FUNCTION — compute accuracy, precision, recall, F1 from trained model
 # ---------------------------
-def get_metrics(model, X, y):
-    pred = model.predict(X)
+def get_metrics(estimator, features, labels):
+    """Return accuracy, precision, recall, F1 for estimator on given data."""
+    pred = estimator.predict(features)
     return {
-        "accuracy": accuracy_score(y, pred),
-        "precision": precision_score(y, pred),
-        "recall": recall_score(y, pred),
-        "f1": f1_score(y, pred)
+        "accuracy": accuracy_score(labels, pred),
+        "precision": precision_score(labels, pred),
+        "recall": recall_score(labels, pred),
+        "f1": f1_score(labels, pred)
     }
 
 # ---------------------------
