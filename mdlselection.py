@@ -178,5 +178,4 @@ metrics = {
 joblib.dump(metrics, "model_metrics.pkl")
 
 print("All model metrics saved successfully!")
-
-# i do not understand git
+print("New changes comming soon.")
