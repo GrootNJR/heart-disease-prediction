@@ -5,8 +5,8 @@ import joblib
 # -------------------------
 # LOAD MODEL + SCALER
 # -------------------------
-model = joblib.load("heart_model.pkl")
-scaler = joblib.load("scaler.pkl")
+model = joblib.load("../heart_model.pkl")
+scaler = joblib.load("../scaler.pkl")
 
 # -------------------------
 # PAGE CONFIG
