@@ -1,9 +1,9 @@
-import streamlit as st
-import pandas as pd
 import joblib
+import pandas as pd
+import streamlit as st
 
 # -------------------------
-# LOAD MODEL + SCALER
+# LOAD MODEL & SCALER
 # -------------------------
 model = joblib.load("heart_model.pkl")
 scaler = joblib.load("scaler.pkl")
@@ -67,7 +67,7 @@ thal = {"Normal": 1, "Fixed Defect": 2, "Reversible Defect": 3}[thal]
 # -------------------------
 if st.button("Predict Heart Disease"):
 
-    # Create dataframe
+    # Build input DataFrame matching training features
     input_data = pd.DataFrame([[age, sex, cp, trestbps, chol, fbs,
                                 restecg, thalach, exang, oldpeak,
                                 slope, ca, thal]],
@@ -77,10 +77,10 @@ if st.button("Predict Heart Disease"):
                                   'slope','ca','thal'
                               ])
 
-    # Scale input
+    # Scale input using pre-fitted scaler
     input_scaled = scaler.transform(input_data)
 
-    # Prediction
+    # Run prediction
     prediction = model.predict(input_scaled)
     probability = model.predict_proba(input_scaled)
 
@@ -96,7 +96,6 @@ if st.button("Predict Heart Disease"):
         st.error("⚠️ Heart Disease Detected")
         risk = "High Risk"
 
-    # Confidence
     confidence = probability[0][prediction[0]] * 100
 
     st.write(f"### Risk Level: {risk}")
